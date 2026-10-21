@@ -1,0 +1,76 @@
+
+name: Render Keep Alive
+
+on:
+  schedule:
+    # Monday-Saturday: 8 AM to 7:50 PM IST
+    - cron: "*/10 8-19 * * 1-6"
+      timezone: "Asia/Kolkata"
+
+    # Final ping at 8 PM IST
+    - cron: "0 20 * * 1-6"
+      timezone: "Asia/Kolkata"
+
+    # Sunday: 8 AM to 1:50 PM IST
+    - cron: "*/10 8-13 * * 0"
+      timezone: "Asia/Kolkata"
+
+    # Final ping at 2 PM IST
+    - cron: "0 14 * * 0"
+      timezone: "Asia/Kolkata"
+
+  workflow_dispatch:
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Ping Render health endpoint
+        shell: bash
+        run: |
+          URL="https://erp-anju-garments-dev.onrender.com/health"
+
+          echo "======================================"
+          echo "Render Keep Alive - Debug"
+          echo "Current UTC time: $(date -u)"
+          echo "Current IST time: $(TZ=Asia/Kolkata date)"
+          echo "Target URL: $URL"
+          echo "Sending health check..."
+          echo "======================================"
+
+          START_TIME=$(date +%s)
+
+          if HTTP_CODE=$(curl -sS -L \
+            --connect-timeout 30 \
+            --max-time 120 \
+            -o /dev/null \
+            -w "%{http_code}" \
+            "$URL"); then
+
+            END_TIME=$(date +%s)
+            ELAPSED=$((END_TIME - START_TIME))
+
+            echo "HTTP status: $HTTP_CODE"
+            echo "Response time: ${ELAPSED} seconds"
+
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              echo "RESULT: SUCCESS - Render responded successfully."
+            else
+              echo "RESULT: WARNING - Render returned a non-2xx status."
+            fi
+
+          else
+            CURL_EXIT=$?
+            END_TIME=$(date +%s)
+            ELAPSED=$((END_TIME - START_TIME))
+
+            echo "RESULT: FAILED - Could not complete health check."
+            echo "curl exit code: $CURL_EXIT"
+            echo "Elapsed time: ${ELAPSED} seconds"
+            exit "$CURL_EXIT"
+          fi
+
+          echo "======================================"
+          echo "Health check finished."
