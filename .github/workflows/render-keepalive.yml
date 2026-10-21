@@ -1,23 +1,6 @@
 name: Render Keep Alive
 
 on:
-  schedule:
-    # Monday–Saturday: every 10 minutes, 8 AM–7:50 PM IST
-    - cron: '3,13,23,33,43,53 8-19 * * 1-6'
-      timezone: Asia/Kolkata
-
-    # Monday–Saturday: final run at 8 PM IST
-    - cron: '0 20 * * 1-6'
-      timezone: Asia/Kolkata
-
-    # Sunday: every 10 minutes, 8 AM–1:50 PM IST
-    - cron: '3,13,23,33,43,53 8-13 * * 0'
-      timezone: Asia/Kolkata
-
-    # Sunday: final run at 2 PM IST
-    - cron: '0 14 * * 0'
-      timezone: Asia/Kolkata
-
   workflow_dispatch:
 
 jobs:
