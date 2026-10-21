@@ -1,24 +1,15 @@
-
 name: Render Keep Alive
 
 on:
   schedule:
-    # Monday-Saturday: 8 AM to 7:50 PM IST
-    - cron: "*/10 8-19 * * 1-6"
-      timezone: "Asia/Kolkata"
-
-    # Final ping at 8 PM IST
-    - cron: "0 20 * * 1-6"
-      timezone: "Asia/Kolkata"
-
-    # Sunday: 8 AM to 1:50 PM IST
-    - cron: "*/10 8-13 * * 0"
-      timezone: "Asia/Kolkata"
-
-    # Final ping at 2 PM IST
-    - cron: "0 14 * * 0"
-      timezone: "Asia/Kolkata"
-
+    - cron: '*/10 8-19 * * 1-6'
+      timezone: Asia/Kolkata
+    - cron: '0 20 * * 1-6'
+      timezone: Asia/Kolkata
+    - cron: '*/10 8-13 * * 0'
+      timezone: Asia/Kolkata
+    - cron: '0 14 * * 0'
+      timezone: Asia/Kolkata
   workflow_dispatch:
 
 jobs:
@@ -29,16 +20,22 @@ jobs:
     steps:
       - name: Ping Render health endpoint
         shell: bash
+        env:
+          RENDER_HEALTH_URL: ${{ secrets.RENDER_HEALTH_URL }}
         run: |
-          URL="https://erp-anju-garments-dev.onrender.com/health"
+          set +x
 
           echo "======================================"
           echo "Render Keep Alive - Debug"
           echo "Current UTC time: $(date -u)"
           echo "Current IST time: $(TZ=Asia/Kolkata date)"
-          echo "Target URL: $URL"
           echo "Sending health check..."
           echo "======================================"
+
+          if [ -z "$RENDER_HEALTH_URL" ]; then
+            echo "ERROR: RENDER_HEALTH_URL secret is missing or empty."
+            exit 1
+          fi
 
           START_TIME=$(date +%s)
 
@@ -47,7 +44,7 @@ jobs:
             --max-time 120 \
             -o /dev/null \
             -w "%{http_code}" \
-            "$URL"); then
+            "$RENDER_HEALTH_URL"); then
 
             END_TIME=$(date +%s)
             ELAPSED=$((END_TIME - START_TIME))
@@ -55,22 +52,21 @@ jobs:
             echo "HTTP status: $HTTP_CODE"
             echo "Response time: ${ELAPSED} seconds"
 
-            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            if [ "$HTTP_CODE" -ge 200 ] &&
+               [ "$HTTP_CODE" -lt 300 ]; then
               echo "RESULT: SUCCESS - Render responded successfully."
             else
               echo "RESULT: WARNING - Render returned a non-2xx status."
             fi
-
           else
             CURL_EXIT=$?
             END_TIME=$(date +%s)
             ELAPSED=$((END_TIME - START_TIME))
 
-            echo "RESULT: FAILED - Could not complete health check."
+            echo "RESULT: FAILED - Health check request failed."
             echo "curl exit code: $CURL_EXIT"
             echo "Elapsed time: ${ELAPSED} seconds"
             exit "$CURL_EXIT"
           fi
 
-          echo "======================================"
           echo "Health check finished."
